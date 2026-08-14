@@ -6,8 +6,11 @@ import {
   Plugin,
   PluginSettingTab,
   Setting,
+  TFile,
   ToggleComponent,
+  Workspace,
 } from "obsidian";
+import { findGitLabHeading } from "./gitlab-anchor";
 import {
   insertManagedToc,
   TocMode,
@@ -130,6 +133,7 @@ export default class TableOfContentsPlugin extends Plugin {
 
   public async onload(): Promise<void> {
     this.settings = { ...this.settings, ...(await this.loadData()) };
+    this.patchGitLabLinkNavigation();
 
     this.addCommand({
       id: "create-toc",
@@ -196,6 +200,58 @@ export default class TableOfContentsPlugin extends Plugin {
     await this.saveData(this.settings);
     const view = this.app.workspace.getActiveViewOfType(MarkdownView);
     if (view) this.updateEditorTocs(view.editor);
+  }
+
+  private patchGitLabLinkNavigation(): void {
+    const workspace = this.app.workspace;
+    const original = workspace.openLinkText;
+    let virtualBlockSequence = 0;
+
+    const patched: Workspace["openLinkText"] = async (
+      linktext,
+      sourcePath,
+      newLeaf,
+      openViewState
+    ) => {
+      const hashIndex = linktext.lastIndexOf("#");
+      if (hashIndex < 0 || linktext.slice(hashIndex + 1).startsWith("^")) {
+        return original.call(workspace, linktext, sourcePath, newLeaf, openViewState);
+      }
+
+      const linkPath = linktext.slice(0, hashIndex);
+      const fragment = linktext.slice(hashIndex + 1);
+      const sourceFile = this.app.vault.getAbstractFileByPath(sourcePath);
+      const targetFile = linkPath
+        ? this.app.metadataCache.getFirstLinkpathDest(linkPath, sourcePath)
+        : sourceFile instanceof TFile ? sourceFile : null;
+      if (!targetFile) {
+        return original.call(workspace, linktext, sourcePath, newLeaf, openViewState);
+      }
+
+      const cache = this.app.metadataCache.getFileCache(targetFile);
+      const heading = findGitLabHeading(cache?.headings || [], fragment);
+      if (!cache || !heading) {
+        return original.call(workspace, linktext, sourcePath, newLeaf, openViewState);
+      }
+
+      const blockId = `toc-gitlab-${Date.now()}-${virtualBlockSequence++}`;
+      const blocks = cache.blocks || (cache.blocks = {});
+      blocks[blockId] = { id: blockId, position: heading.position };
+      const nativeTarget = `${linkPath}#^${blockId}`;
+
+      try {
+        await original.call(workspace, nativeTarget, sourcePath, newLeaf, openViewState);
+      } finally {
+        window.setTimeout(() => {
+          if (blocks[blockId]?.position === heading.position) delete blocks[blockId];
+        }, 1000);
+      }
+    };
+
+    workspace.openLinkText = patched;
+    this.register(() => {
+      if (workspace.openLinkText === patched) workspace.openLinkText = original;
+    });
   }
 
   private insertToc(editor: Editor, mode: TocMode): void {

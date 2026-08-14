@@ -19,4 +19,24 @@ function gitLabHeadingSlug(heading) {
   return link.slice(link.indexOf("#") + 1, -1);
 }
 
-module.exports = { gitLabHeadingLink, gitLabHeadingSlug };
+function findGitLabHeading(headings, fragment) {
+  let decodedFragment;
+  try {
+    decodedFragment = decodeURIComponent(fragment.replace(/^#/, ""));
+  } catch (_error) {
+    return undefined;
+  }
+
+  const counts = new Map();
+  return headings.find((heading) => {
+    const text = heading.heading || heading.text;
+    const baseSlug = gitLabHeadingSlug(text);
+    const duplicateIndex = counts.get(baseSlug) || 0;
+    counts.set(baseSlug, duplicateIndex + 1);
+    const link = gitLabHeadingLink(text, duplicateIndex);
+    const encodedSlug = link.slice(link.indexOf("#") + 1, -1);
+    return decodeURIComponent(encodedSlug) === decodedFragment;
+  });
+}
+
+module.exports = { findGitLabHeading, gitLabHeadingLink, gitLabHeadingSlug };
