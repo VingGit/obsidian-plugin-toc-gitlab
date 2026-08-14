@@ -12,7 +12,7 @@
     "importHelpers": true,
     "lib": ["dom", "es5", "scripthost", "es2015"],
     "strict": true,
-    "types": ["./src/anchor.d.ts"]
+    "skipLibCheck": true
   },
   "include": ["**/*.ts"]
 }

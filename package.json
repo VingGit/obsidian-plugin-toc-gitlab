@@ -4,7 +4,8 @@
   "scripts": {
     "start": "obsidian-plugin dev src/main.ts",
     "build": "obsidian-plugin build src/main.ts",
-    "lint": "eslint . --ext .ts,.tsx --fix",
+    "test": "node tests/gitlab-anchor.test.js",
+    "lint": "eslint . --ext .ts,.tsx",
     "release": "auto shipit"
   },
   "keywords": [
@@ -12,13 +13,12 @@
     "plugin"
   ],
   "author": "Andrew Lisowski <lisowski54@gmail.com>",
-  "repository": "hipstersmoothie/obsidian-plugin-toc",
+  "repository": "VingGit/obsidian-plugin-toc-gitlab",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^14.14.2",
     "@typescript-eslint/eslint-plugin": "^4.15.1",
     "@typescript-eslint/parser": "^4.15.1",
-    "anchor-markdown-header": "^0.7.0",
     "auto": "^10.16.7",
     "auto-plugin-obsidian": "^0.1.4",
     "endent": "^2.0.1",

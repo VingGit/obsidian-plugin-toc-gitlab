@@ -1,6 +1,8 @@
-# obsidian-plugin-toc
+# Table of Contents for GitLab
 
-Create a table of contents for a note.
+Create a table of contents whose Markdown heading links follow GitLab 17+ anchor rules, including Unicode lowercasing, punctuation removal, and duplicate-heading suffixes.
+
+This is a GitLab-focused fork of [obsidian-plugin-toc](https://github.com/hipstersmoothie/obsidian-plugin-toc) by Andrew Lisowski.
 
 ![Example of content creation](example.gif)
 
@@ -21,6 +23,8 @@ And the following settings:
 | Title                | 'string'             | undefined' |
 | Minimum header depth | number               | 2          |
 | Maximum header depth | number               | 6          |
+| Use Markdown links | boolean | false |
+| GitLab-compatible Markdown section links | boolean | false |
 
 ## Usage
 
@@ -33,7 +37,7 @@ _Output:_ "Table of Contents" only contains subheadings of that level 2 heading
 
 ## Installing
 
-Either install the latest release from Obsidian directly or unzip the [latest release](https://github.com/hipstersmoothie/obsidian-plugin-toc/releases/latest) into your `<vault>/.obsidian/plugins/` folder.
+Either install the latest release from Obsidian directly or unzip the [latest release](https://github.com/VingGit/obsidian-plugin-toc-gitlab/releases/latest) into your `<vault>/.obsidian/plugins/` folder.
 
 Once the plugin is installed, you need to make sure that the switch for "Table of Contents" is turned on.
 After you are all setup you would see this plugins commands in the command palette (`CMD + P`).
