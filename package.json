@@ -1,12 +1,12 @@
 {
   "name": "toc-gitlab",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Create auto-updating tables of contents with GitLab-compatible heading links.",
   "scripts": {
     "start": "obsidian-plugin dev src/main.ts",
     "build": "obsidian-plugin build src/main.ts",
     "test": "node tests/gitlab-anchor.test.js && node tests/managed-toc.test.js",
-    "lint": "eslint . --ext .ts,.tsx",
+    "lint": "eslint .",
     "release": "auto shipit"
   },
   "keywords": [
@@ -17,18 +17,19 @@
   "repository": "VingGit/obsidian-plugin-toc-gitlab",
   "license": "MIT",
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@eslint/json": "^0.14.0",
     "@types/node": "^14.14.2",
-    "@typescript-eslint/eslint-plugin": "^4.15.1",
-    "@typescript-eslint/parser": "^4.15.1",
     "auto": "^10.16.7",
     "auto-plugin-obsidian": "^0.1.4",
     "endent": "^2.0.1",
-    "eslint": "7.12.1",
-    "eslint-config-prettier": "^7.2.0",
+    "eslint": "^9.39.5",
+    "eslint-plugin-obsidianmd": "^0.4.1",
     "obsidian": "obsidianmd/obsidian-api",
     "obsidian-plugin-cli": "^0.4.3",
     "prettier": "^2.2.1",
     "tslib": "^2.1.0",
-    "typescript": "^4.1.5"
+    "typescript": "^4.1.5",
+    "typescript-eslint": "^8.67.0"
   }
 }
