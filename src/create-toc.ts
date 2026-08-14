@@ -1,7 +1,7 @@
 import endent from "endent";
 import { CachedMetadata, HeadingCache, Notice } from "obsidian";
 import { TableOfContentsPluginSettings } from "./types";
-import anchor from 'anchor-markdown-header';
+import { gitLabHeadingLink, gitLabHeadingSlug } from "./gitlab-anchor";
 
 export interface CursorPosition {
   line: number;
@@ -33,7 +33,7 @@ const getSubsequentHeadings = (
 const getPreviousLevelHeading = (headings: HeadingCache[], currentHeading: HeadingCache) => {
   const index = headings.indexOf(currentHeading);
   const targetHeadings = headings.slice(0, index).reverse();
-  return targetHeadings.find((item, _index, _array) => {
+  return targetHeadings.find((item) => {
     return item.level == currentHeading.level - 1;
   });
 }
@@ -46,6 +46,17 @@ export const createToc = (
   const currentDepth = getCurrentHeaderDepth(headings, cursor);
   const subsequentHeadings = getSubsequentHeadings(headings, cursor);
   const includedHeadings: HeadingCache[] = [];
+  const gitLabDuplicateIndexes = new Map<HeadingCache, number>();
+  const gitLabSlugCounts = new Map<string, number>();
+
+  // GitLab disambiguates repeated anchors across the entire document, even
+  // when an earlier heading is outside the generated TOC.
+  for (const heading of headings) {
+    const slug = gitLabHeadingSlug(heading.heading);
+    const duplicateIndex = gitLabSlugCounts.get(slug) || 0;
+    gitLabDuplicateIndexes.set(heading, duplicateIndex);
+    gitLabSlugCounts.set(slug, duplicateIndex + 1);
+  }
 
   for (const heading of subsequentHeadings) {
     if (heading.level <= currentDepth) {
@@ -83,7 +94,10 @@ export const createToc = (
     let linkText;
 
     if (settings.useMarkdown && settings.githubCompat)
-      return `${prefix} ${anchor(heading.heading)}`;
+      return `${prefix} ${gitLabHeadingLink(
+        heading.heading,
+        gitLabDuplicateIndexes.get(heading)
+      )}`;
     else if (settings.useMarkdown) 
       linkText = encodeURI(heading.heading);
     else if (typeof previousLevelHeading == "undefined")

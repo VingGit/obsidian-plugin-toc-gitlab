@@ -7,13 +7,8 @@ import {
   Setting,
 ToggleComponent,
 } from "obsidian";
-import { createToc, getCurrentHeaderDepth } from "./create-toc";
+import { createToc, CursorPosition, getCurrentHeaderDepth } from "./create-toc";
 import { TableOfContentsPluginSettings } from "./types";
-
-export interface CursorPosition {
-  line: number;
-  ch: number;
-}
 
 class TableOfContentsSettingsTab extends PluginSettingTab {
   private readonly plugin: TableOfContentsPlugin;
@@ -38,7 +33,7 @@ class TableOfContentsSettingsTab extends PluginSettingTab {
           .addOption("number", "Number")
           .setValue(this.plugin.settings.listStyle)
           .onChange((value) => {
-            this.plugin.settings.listStyle = value as any;
+            this.plugin.settings.listStyle = value as "bullet" | "number";
             this.plugin.saveData(this.plugin.settings);
             this.display();
           })
@@ -102,12 +97,10 @@ class TableOfContentsSettingsTab extends PluginSettingTab {
       );
     
     const githubCompatDesc: DocumentFragment = new DocumentFragment()
-    githubCompatDesc.appendText("Github generates section links differently than Obsidian, this setting uses ")
-    githubCompatDesc.createEl('a', {href: "https://github.com/thlorenz/anchor-markdown-header", text: "anchor-markdown-header"})
-    githubCompatDesc.appendText(" to generate the proper links.")
+    githubCompatDesc.appendText("Generate section links using GitLab's heading anchor rules.")
 
     const githubSetting = new Setting(containerEl)
-      .setName("Github compliant Markdown section links")
+      .setName("GitLab-compatible Markdown section links")
       .setDesc(githubCompatDesc)
       .setDisabled(!this.plugin.settings.useMarkdown)
       .addToggle((value) =>
@@ -124,7 +117,7 @@ class TableOfContentsSettingsTab extends PluginSettingTab {
 
 type GetSettings = (
   data: CachedMetadata,
-  cursor: CodeMirror.Position
+  cursor: CursorPosition
 ) => TableOfContentsPluginSettings;
 
 export default class TableOfContentsPlugin extends Plugin {
@@ -179,7 +172,7 @@ export default class TableOfContentsPlugin extends Plugin {
     const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
 
     if (activeView && activeView.file) {
-      const editor = activeView.sourceMode.cmEditor;
+      const editor = activeView.editor;
       const cursor = editor.getCursor();
       const data = this.app.metadataCache.getFileCache(activeView.file) || {};
       const toc = createToc(
