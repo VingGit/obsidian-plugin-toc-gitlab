@@ -5,9 +5,8 @@ import {
   Notice,
   Plugin,
   PluginSettingTab,
-  Setting,
+  SettingDefinitionItem,
   TFile,
-  ToggleComponent,
   Workspace,
 } from "obsidian";
 import { findGitLabHeading } from "./gitlab-anchor";
@@ -19,6 +18,10 @@ import {
 } from "./create-toc";
 import { TableOfContentsPluginSettings } from "./types";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
 class TableOfContentsSettingsTab extends PluginSettingTab {
   private readonly plugin: TableOfContentsPlugin;
 
@@ -27,95 +30,85 @@ class TableOfContentsSettingsTab extends PluginSettingTab {
     this.plugin = plugin;
   }
 
-  public display(): void {
-    const { containerEl } = this;
-    containerEl.empty();
-    containerEl.createEl("h2", { text: "Table of Contents for GitLab" });
+  public getSettingDefinitions(): SettingDefinitionItem[] {
+    return [{
+      type: "group",
+      heading: "Table of Contents for GitLab",
+      items: [
+        {
+          name: "List style",
+          desc: "The type of list used by generated tables of contents.",
+          control: {
+            type: "dropdown",
+            key: "listStyle",
+            options: { bullet: "Bullet", number: "Number" },
+            defaultValue: "bullet",
+          },
+        },
+        {
+          name: "Title",
+          desc: "Optional text inserted before each generated list.",
+          control: { type: "text", key: "title", defaultValue: "", placeholder: "**Table of Contents**" },
+        },
+        {
+          name: "Minimum heading depth",
+          desc: "The shallowest heading level included in a full TOC.",
+          control: { type: "slider", key: "minimumDepth", defaultValue: 2, min: 1, max: 6, step: 1 },
+        },
+        {
+          name: "Maximum heading depth",
+          desc: "The deepest heading level included in a full TOC.",
+          control: { type: "slider", key: "maximumDepth", defaultValue: 6, min: 1, max: 6, step: 1 },
+        },
+        {
+          name: "Use Markdown links",
+          desc: "Generate Markdown links instead of WikiLinks.",
+          control: { type: "toggle", key: "useMarkdown", defaultValue: false },
+        },
+        {
+          name: "GitLab-compatible Markdown section links",
+          desc: "Generate links using current GitLab heading-anchor rules.",
+          control: {
+            type: "toggle",
+            key: "githubCompat",
+            defaultValue: false,
+            disabled: () => !this.plugin.settings.useMarkdown,
+          },
+        },
+        {
+          name: "Automatically update managed TOCs",
+          desc: "Refresh generated TOCs shortly after headings are edited or reordered.",
+          control: { type: "toggle", key: "autoUpdate", defaultValue: true },
+        },
+      ],
+    }];
+  }
 
-    new Setting(containerEl)
-      .setName("List style")
-      .setDesc("The type of list used by generated tables of contents.")
-      .addDropdown((dropdown) => dropdown
-        .addOption("bullet", "Bullet")
-        .addOption("number", "Number")
-        .setValue(this.plugin.settings.listStyle)
-        .onChange(async (value) => {
-          this.plugin.settings.listStyle = value as "bullet" | "number";
-          await this.plugin.saveSettings();
-        }));
-
-    new Setting(containerEl)
-      .setName("Title")
-      .setDesc("Optional text inserted before each generated list.")
-      .addText((text) => text
-        .setPlaceholder("**Table of Contents**")
-        .setValue(this.plugin.settings.title || "")
-        .onChange(async (value) => {
-          this.plugin.settings.title = value;
-          await this.plugin.saveSettings();
-        }));
-
-    new Setting(containerEl)
-      .setName("Minimum heading depth")
-      .setDesc("The shallowest heading level included in a full TOC.")
-      .addSlider((slider) => slider
-        .setValue(this.plugin.settings.minimumDepth)
-        .setDynamicTooltip()
-        .setLimits(1, 6, 1)
-        .onChange(async (value) => {
-          this.plugin.settings.minimumDepth = value;
-          await this.plugin.saveSettings();
-        }));
-
-    new Setting(containerEl)
-      .setName("Maximum heading depth")
-      .setDesc("The deepest heading level included in a full TOC.")
-      .addSlider((slider) => slider
-        .setValue(this.plugin.settings.maximumDepth)
-        .setDynamicTooltip()
-        .setLimits(1, 6, 1)
-        .onChange(async (value) => {
-          this.plugin.settings.maximumDepth = value;
-          await this.plugin.saveSettings();
-        }));
-
-    const gitLabSettings: Setting[] = [];
-    new Setting(containerEl)
-      .setName("Use Markdown links")
-      .setDesc("Generate Markdown links instead of WikiLinks.")
-      .addToggle((toggle) => toggle
-        .setValue(this.plugin.settings.useMarkdown)
-        .onChange(async (value) => {
+  public async setControlValue(key: string, value: unknown): Promise<void> {
+    switch (key) {
+      case "listStyle":
+        if (value === "bullet" || value === "number") this.plugin.settings.listStyle = value;
+        break;
+      case "title":
+        if (typeof value === "string") this.plugin.settings.title = value;
+        break;
+      case "minimumDepth":
+      case "maximumDepth":
+        if (typeof value === "number") this.plugin.settings[key] = value;
+        break;
+      case "useMarkdown":
+        if (typeof value === "boolean") {
           this.plugin.settings.useMarkdown = value;
-          if (!value) {
-            this.plugin.settings.githubCompat = false;
-            (gitLabSettings[0].components[0] as ToggleComponent).setValue(false);
-          }
-          gitLabSettings[0].setDisabled(!value);
-          await this.plugin.saveSettings();
-        }));
-
-    gitLabSettings.push(new Setting(containerEl)
-      .setName("GitLab-compatible Markdown section links")
-      .setDesc("Generate links using current GitLab heading-anchor rules.")
-      .setDisabled(!this.plugin.settings.useMarkdown)
-      .addToggle((toggle) => toggle
-        .setValue(this.plugin.settings.githubCompat ?? false)
-        .setDisabled(!this.plugin.settings.useMarkdown)
-        .onChange(async (value) => {
-          this.plugin.settings.githubCompat = value;
-          await this.plugin.saveSettings();
-        })));
-
-    new Setting(containerEl)
-      .setName("Automatically update managed TOCs")
-      .setDesc("Refresh generated TOCs shortly after headings are edited or reordered.")
-      .addToggle((toggle) => toggle
-        .setValue(this.plugin.settings.autoUpdate)
-        .onChange(async (value) => {
-          this.plugin.settings.autoUpdate = value;
-          await this.plugin.saveSettings();
-        }));
+          if (!value) this.plugin.settings.githubCompat = false;
+        }
+        break;
+      case "githubCompat":
+      case "autoUpdate":
+        if (typeof value === "boolean") this.plugin.settings[key] = value;
+        break;
+    }
+    await this.plugin.saveSettings();
+    this.refreshDomState();
   }
 }
 
@@ -131,8 +124,12 @@ export default class TableOfContentsPlugin extends Plugin {
   private updateTimers = new Map<Editor, number>();
   private updatingEditors = new Set<Editor>();
 
-  public async onload(): Promise<void> {
-    this.settings = { ...this.settings, ...(await this.loadData()) };
+  public onload(): void {
+    void this.initialize();
+  }
+
+  private async initialize(): Promise<void> {
+    await this.loadSettings();
     this.patchGitLabLinkNavigation();
 
     this.addCommand({
@@ -147,7 +144,7 @@ export default class TableOfContentsPlugin extends Plugin {
     });
     this.addCommand({
       id: "toggle-heading-exclusion",
-      name: "Toggle current heading exclusion from generated TOCs",
+      name: "Toggle current heading exclusion from generated tocs",
       editorCallback: (editor) => this.toggleExclusion(editor),
     });
     this.addCommand({
@@ -162,7 +159,7 @@ export default class TableOfContentsPlugin extends Plugin {
         .setIcon("list-tree")
         .onClick(() => this.insertToc(editor, "full")));
       menu.addItem((item) => item
-        .setTitle("Create managed TOC for next heading level")
+        .setTitle("Create managed toc for next heading level")
         .setIcon("list")
         .onClick(() => this.insertToc(editor, "next")));
 
@@ -191,6 +188,18 @@ export default class TableOfContentsPlugin extends Plugin {
     this.addSettingTab(new TableOfContentsSettingsTab(this.app, this));
   }
 
+  private async loadSettings(): Promise<void> {
+    const loaded: unknown = await this.loadData();
+    if (!isRecord(loaded)) return;
+    if (loaded.listStyle === "bullet" || loaded.listStyle === "number") this.settings.listStyle = loaded.listStyle;
+    if (typeof loaded.minimumDepth === "number") this.settings.minimumDepth = loaded.minimumDepth;
+    if (typeof loaded.maximumDepth === "number") this.settings.maximumDepth = loaded.maximumDepth;
+    if (typeof loaded.title === "string") this.settings.title = loaded.title;
+    if (typeof loaded.useMarkdown === "boolean") this.settings.useMarkdown = loaded.useMarkdown;
+    if (typeof loaded.githubCompat === "boolean") this.settings.githubCompat = loaded.githubCompat;
+    if (typeof loaded.autoUpdate === "boolean") this.settings.autoUpdate = loaded.autoUpdate;
+  }
+
   public onunload(): void {
     for (const timer of this.updateTimers.values()) window.clearTimeout(timer);
     this.updateTimers.clear();
@@ -204,7 +213,7 @@ export default class TableOfContentsPlugin extends Plugin {
 
   private patchGitLabLinkNavigation(): void {
     const workspace = this.app.workspace;
-    const original = workspace.openLinkText;
+    const original = workspace.openLinkText.bind(workspace);
     let virtualBlockSequence = 0;
 
     const patched: Workspace["openLinkText"] = async (
@@ -215,7 +224,7 @@ export default class TableOfContentsPlugin extends Plugin {
     ) => {
       const hashIndex = linktext.lastIndexOf("#");
       if (hashIndex < 0 || linktext.slice(hashIndex + 1).startsWith("^")) {
-        return original.call(workspace, linktext, sourcePath, newLeaf, openViewState);
+        return original(linktext, sourcePath, newLeaf, openViewState);
       }
 
       const linkPath = linktext.slice(0, hashIndex);
@@ -225,13 +234,13 @@ export default class TableOfContentsPlugin extends Plugin {
         ? this.app.metadataCache.getFirstLinkpathDest(linkPath, sourcePath)
         : sourceFile instanceof TFile ? sourceFile : null;
       if (!targetFile) {
-        return original.call(workspace, linktext, sourcePath, newLeaf, openViewState);
+        return original(linktext, sourcePath, newLeaf, openViewState);
       }
 
       const cache = this.app.metadataCache.getFileCache(targetFile);
       const heading = findGitLabHeading(cache?.headings || [], fragment);
       if (!cache || !heading) {
-        return original.call(workspace, linktext, sourcePath, newLeaf, openViewState);
+        return original(linktext, sourcePath, newLeaf, openViewState);
       }
 
       const blockId = `toc-gitlab-${Date.now()}-${virtualBlockSequence++}`;
@@ -240,7 +249,7 @@ export default class TableOfContentsPlugin extends Plugin {
       const nativeTarget = `${linkPath}#^${blockId}`;
 
       try {
-        await original.call(workspace, nativeTarget, sourcePath, newLeaf, openViewState);
+        await original(nativeTarget, sourcePath, newLeaf, openViewState);
       } finally {
         window.setTimeout(() => {
           if (blocks[blockId]?.position === heading.position) delete blocks[blockId];
@@ -266,7 +275,7 @@ export default class TableOfContentsPlugin extends Plugin {
     const line = editor.getLine(cursor.line);
     const replacement = toggleHeadingExclusion(line);
     if (replacement === null) {
-      new Notice("Place the cursor on a Markdown heading first.");
+      new Notice("Select a heading before running this command.");
       return;
     }
     editor.replaceRange(replacement, { line: cursor.line, ch: 0 }, { line: cursor.line, ch: line.length });
