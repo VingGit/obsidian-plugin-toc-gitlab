@@ -1,6 +1,6 @@
 {
   "name": "toc-gitlab",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Create auto-updating tables of contents with GitLab-compatible heading links.",
   "scripts": {
     "start": "obsidian-plugin dev src/main.ts",
@@ -25,7 +25,7 @@
     "endent": "^2.0.1",
     "eslint": "^9.39.5",
     "eslint-plugin-obsidianmd": "^0.4.1",
-    "obsidian": "obsidianmd/obsidian-api",
+    "obsidian": "1.13.1",
     "obsidian-plugin-cli": "^0.4.3",
     "prettier": "^2.2.1",
     "tslib": "^2.1.0",
