@@ -12,6 +12,7 @@ This is a GitLab-focused fork of [obsidian-plugin-toc](https://github.com/hipste
 - Exclude individual headings with an invisible HTML comment.
 - Toggle heading exclusion from the command palette or the editor right-click menu.
 - Generate GitLab-compatible anchors for Unicode, punctuation, and duplicate headings.
+- Follow those raw GitLab-compatible links natively inside Obsidian without changing the Markdown.
 
 ## Usage
 
@@ -60,7 +61,7 @@ The heading still renders normally and still receives its normal GitLab anchor, 
 | GitLab-compatible Markdown section links | Off | Apply GitLab heading-anchor rules. |
 | Automatically update managed TOCs | On | Refresh TOCs after heading edits. |
 
-For portable GitLab documents, enable **Use Markdown links** and **GitLab-compatible Markdown section links**. GitLab-style links may require a compatibility plugin such as GFM Heading Links to navigate correctly inside Obsidian.
+For portable GitLab documents, enable **Use Markdown links** and **GitLab-compatible Markdown section links**. The plugin intercepts Obsidian's native link router at runtime, maps GitLab fragments to their real headings, and uses temporary in-memory block targets for exact navigation—including duplicate headings. The raw Markdown remains GitLab-compatible and no compatibility plugin is required.
 
 ## Installation
 

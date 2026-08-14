@@ -1,5 +1,6 @@
 const assert = require("assert");
 const {
+  findGitLabHeading,
   gitLabHeadingLink,
   gitLabHeadingSlug,
 } = require("../src/gitlab-anchor");
@@ -21,4 +22,12 @@ assert.strictEqual(
   "[TEHTÄVÄT](#teht%C3%A4v%C3%A4t-1)"
 );
 
-console.log(`Validated ${cases.size + 2} GitLab anchor cases.`);
+const headings = [
+  { heading: "TEHTÄVÄT", position: { start: { line: 1 }, end: { line: 1 } } },
+  { heading: "TEHTÄVÄT", position: { start: { line: 2 }, end: { line: 2 } } },
+];
+assert.strictEqual(findGitLabHeading(headings, "teht%C3%A4v%C3%A4t"), headings[0]);
+assert.strictEqual(findGitLabHeading(headings, "tehtävät-1"), headings[1]);
+assert.strictEqual(findGitLabHeading(headings, "missing"), undefined);
+
+console.log(`Validated ${cases.size + 5} GitLab anchor and navigation cases.`);
