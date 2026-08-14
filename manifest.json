@@ -6,5 +6,5 @@
   "description": "Create auto-updating tables of contents with GitLab-compatible heading links.",
   "isDesktopOnly": false,
   "minAppVersion": "1.13.0",
-  "version": "0.4.2"
+  "version": "0.4.3"
 }
