@@ -1,13 +1,19 @@
 import {
   App,
-  CachedMetadata,
+  Editor,
   MarkdownView,
+  Notice,
   Plugin,
   PluginSettingTab,
   Setting,
-ToggleComponent,
+  ToggleComponent,
 } from "obsidian";
-import { createToc, CursorPosition, getCurrentHeaderDepth } from "./create-toc";
+import {
+  insertManagedToc,
+  TocMode,
+  toggleHeadingExclusion,
+  updateManagedTocs,
+} from "./create-toc";
 import { TableOfContentsPluginSettings } from "./types";
 
 class TableOfContentsSettingsTab extends PluginSettingTab {
@@ -21,169 +27,228 @@ class TableOfContentsSettingsTab extends PluginSettingTab {
   public display(): void {
     const { containerEl } = this;
     containerEl.empty();
-
-    containerEl.createEl("h2", { text: "Table of Contents - Settings" });
+    containerEl.createEl("h2", { text: "Table of Contents for GitLab" });
 
     new Setting(containerEl)
-      .setName("List Style")
-      .setDesc("The type of list to render the table of contents as.")
-      .addDropdown((dropdown) =>
-        dropdown
-          .addOption("bullet", "Bullet")
-          .addOption("number", "Number")
-          .setValue(this.plugin.settings.listStyle)
-          .onChange((value) => {
-            this.plugin.settings.listStyle = value as "bullet" | "number";
-            this.plugin.saveData(this.plugin.settings);
-            this.display();
-          })
-      );
+      .setName("List style")
+      .setDesc("The type of list used by generated tables of contents.")
+      .addDropdown((dropdown) => dropdown
+        .addOption("bullet", "Bullet")
+        .addOption("number", "Number")
+        .setValue(this.plugin.settings.listStyle)
+        .onChange(async (value) => {
+          this.plugin.settings.listStyle = value as "bullet" | "number";
+          await this.plugin.saveSettings();
+        }));
 
     new Setting(containerEl)
       .setName("Title")
-      .setDesc("Optional title to put before the table of contents")
-      .addText((text) =>
-        text
-          .setPlaceholder("**Table of Contents**")
-          .setValue(this.plugin.settings.title || "")
-          .onChange((value) => {
-            this.plugin.settings.title = value;
-            this.plugin.saveData(this.plugin.settings);
-          })
-      );
+      .setDesc("Optional text inserted before each generated list.")
+      .addText((text) => text
+        .setPlaceholder("**Table of Contents**")
+        .setValue(this.plugin.settings.title || "")
+        .onChange(async (value) => {
+          this.plugin.settings.title = value;
+          await this.plugin.saveSettings();
+        }));
 
     new Setting(containerEl)
-      .setName("Minimum Header Depth")
-      .setDesc(
-        "The lowest header depth to add to the table of contents. Defaults to 2"
-      )
-      .addSlider((text) =>
-        text
-          .setValue(this.plugin.settings.minimumDepth)
-          .setDynamicTooltip()
-          .setLimits(1, 6, 1)
-          .onChange((value) => {
-            this.plugin.settings.minimumDepth = value;
-            this.plugin.saveData(this.plugin.settings);
-          })
-      );
+      .setName("Minimum heading depth")
+      .setDesc("The shallowest heading level included in a full TOC.")
+      .addSlider((slider) => slider
+        .setValue(this.plugin.settings.minimumDepth)
+        .setDynamicTooltip()
+        .setLimits(1, 6, 1)
+        .onChange(async (value) => {
+          this.plugin.settings.minimumDepth = value;
+          await this.plugin.saveSettings();
+        }));
 
     new Setting(containerEl)
-      .setName("Maximum Header Depth")
-      .setDesc(
-        "The highest header depth to add to the table of contents. Defaults to 6"
-      )
-      .addSlider((text) =>
-        text
-          .setValue(this.plugin.settings.maximumDepth)
-          .setDynamicTooltip()
-          .setLimits(1, 6, 1)
-          .onChange((value) => {
-            this.plugin.settings.maximumDepth = value;
-            this.plugin.saveData(this.plugin.settings);
-          })
-      );
-    
+      .setName("Maximum heading depth")
+      .setDesc("The deepest heading level included in a full TOC.")
+      .addSlider((slider) => slider
+        .setValue(this.plugin.settings.maximumDepth)
+        .setDynamicTooltip()
+        .setLimits(1, 6, 1)
+        .onChange(async (value) => {
+          this.plugin.settings.maximumDepth = value;
+          await this.plugin.saveSettings();
+        }));
+
+    const gitLabSettings: Setting[] = [];
     new Setting(containerEl)
       .setName("Use Markdown links")
-      .setDesc("Auto-generate Markdown links, instead of the default WikiLinks")
-      .addToggle((value) =>
-        value.setValue(this.plugin.settings.useMarkdown).onChange((value) => {
+      .setDesc("Generate Markdown links instead of WikiLinks.")
+      .addToggle((toggle) => toggle
+        .setValue(this.plugin.settings.useMarkdown)
+        .onChange(async (value) => {
           this.plugin.settings.useMarkdown = value;
-          this.plugin.saveData(this.plugin.settings);
-          if(!value) (githubSetting.components[0] as ToggleComponent).setValue(false)
-          githubSetting.setDisabled(!value)
-        })
-      );
-    
-    const githubCompatDesc: DocumentFragment = new DocumentFragment()
-    githubCompatDesc.appendText("Generate section links using GitLab's heading anchor rules.")
+          if (!value) {
+            this.plugin.settings.githubCompat = false;
+            (gitLabSettings[0].components[0] as ToggleComponent).setValue(false);
+          }
+          gitLabSettings[0].setDisabled(!value);
+          await this.plugin.saveSettings();
+        }));
 
-    const githubSetting = new Setting(containerEl)
+    gitLabSettings.push(new Setting(containerEl)
       .setName("GitLab-compatible Markdown section links")
-      .setDesc(githubCompatDesc)
+      .setDesc("Generate links using current GitLab heading-anchor rules.")
       .setDisabled(!this.plugin.settings.useMarkdown)
-      .addToggle((value) =>
-        value
-          .setValue(this.plugin.settings.githubCompat ?? false)
-          .setDisabled(!this.plugin.settings.useMarkdown)
-          .onChange((value) => {
-            this.plugin.settings.githubCompat = value;
-            this.plugin.saveData(this.plugin.settings);
-        })
-      );
+      .addToggle((toggle) => toggle
+        .setValue(this.plugin.settings.githubCompat ?? false)
+        .setDisabled(!this.plugin.settings.useMarkdown)
+        .onChange(async (value) => {
+          this.plugin.settings.githubCompat = value;
+          await this.plugin.saveSettings();
+        })));
+
+    new Setting(containerEl)
+      .setName("Automatically update managed TOCs")
+      .setDesc("Refresh generated TOCs shortly after headings are edited or reordered.")
+      .addToggle((toggle) => toggle
+        .setValue(this.plugin.settings.autoUpdate)
+        .onChange(async (value) => {
+          this.plugin.settings.autoUpdate = value;
+          await this.plugin.saveSettings();
+        }));
   }
 }
-
-type GetSettings = (
-  data: CachedMetadata,
-  cursor: CursorPosition
-) => TableOfContentsPluginSettings;
 
 export default class TableOfContentsPlugin extends Plugin {
   public settings: TableOfContentsPluginSettings = {
     minimumDepth: 2,
     maximumDepth: 6,
     listStyle: "bullet",
-    useMarkdown: false
+    useMarkdown: false,
+    autoUpdate: true,
   };
 
-  public async onload(): Promise<void> {
-    console.log("Load Table of Contents plugin");
+  private updateTimers = new Map<Editor, number>();
+  private updatingEditors = new Set<Editor>();
 
-    this.settings = {
-      ...this.settings,
-      ...(await this.loadData()),
-    };
+  public async onload(): Promise<void> {
+    this.settings = { ...this.settings, ...(await this.loadData()) };
 
     this.addCommand({
       id: "create-toc",
-      name: "Create table of contents",
-      callback: this.createTocForActiveFile(),
+      name: "Create managed table of contents",
+      editorCallback: (editor) => this.insertToc(editor, "full"),
     });
-
     this.addCommand({
       id: "create-toc-next-level",
-      name: "Create table of contents for next heading level",
-      callback: this.createTocForActiveFile((data, cursor) => {
-        const currentHeaderDepth = getCurrentHeaderDepth(
-          data.headings || [],
-          cursor
-        );
-        const depth = Math.max(
-          currentHeaderDepth + 1,
-          this.settings.minimumDepth
-        );
-
-        return {
-          ...this.settings,
-          minimumDepth: depth,
-          maximumDepth: depth,
-        };
-      }),
+      name: "Create managed table of contents for next heading level",
+      editorCallback: (editor) => this.insertToc(editor, "next"),
     });
+    this.addCommand({
+      id: "toggle-heading-exclusion",
+      name: "Toggle current heading exclusion from generated TOCs",
+      editorCallback: (editor) => this.toggleExclusion(editor),
+    });
+    this.addCommand({
+      id: "update-managed-tocs",
+      name: "Update managed tables of contents now",
+      editorCallback: (editor) => this.updateEditorTocs(editor),
+    });
+
+    this.registerEvent(this.app.workspace.on("editor-menu", (menu, editor) => {
+      menu.addItem((item) => item
+        .setTitle("Create managed table of contents")
+        .setIcon("list-tree")
+        .onClick(() => this.insertToc(editor, "full")));
+      menu.addItem((item) => item
+        .setTitle("Create managed TOC for next heading level")
+        .setIcon("list")
+        .onClick(() => this.insertToc(editor, "next")));
+
+      const line = editor.getLine(editor.getCursor().line);
+      if (/^(#{1,6})[ \t]+/.test(line)) {
+        const excluded = /<!--\s*toc-ignore\s*-->/.test(line);
+        menu.addSeparator();
+        menu.addItem((item) => item
+          .setTitle(excluded ? "Include heading in generated TOCs" : "Exclude heading from generated TOCs")
+          .setIcon(excluded ? "list-plus" : "list-x")
+          .onClick(() => this.toggleExclusion(editor)));
+      }
+    }));
+
+    this.registerEvent(this.app.workspace.on("editor-change", (editor) => {
+      if (!this.settings.autoUpdate || this.updatingEditors.has(editor)) return;
+      const previousTimer = this.updateTimers.get(editor);
+      if (previousTimer !== undefined) window.clearTimeout(previousTimer);
+      const timer = window.setTimeout(() => {
+        this.updateTimers.delete(editor);
+        this.updateEditorTocs(editor);
+      }, 500);
+      this.updateTimers.set(editor, timer);
+    }));
 
     this.addSettingTab(new TableOfContentsSettingsTab(this.app, this));
   }
 
-  private createTocForActiveFile = (
-    settings: TableOfContentsPluginSettings | GetSettings = this.settings
-  ) => () => {
-    const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+  public onunload(): void {
+    for (const timer of this.updateTimers.values()) window.clearTimeout(timer);
+    this.updateTimers.clear();
+  }
 
-    if (activeView && activeView.file) {
-      const editor = activeView.editor;
-      const cursor = editor.getCursor();
-      const data = this.app.metadataCache.getFileCache(activeView.file) || {};
-      const toc = createToc(
-        data,
-        cursor,
-        typeof settings === "function" ? settings(data, cursor) : settings
-      );
+  public async saveSettings(): Promise<void> {
+    await this.saveData(this.settings);
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (view) this.updateEditorTocs(view.editor);
+  }
 
-      if (toc) {
-        editor.replaceRange(toc, cursor);
-      }
+  private insertToc(editor: Editor, mode: TocMode): void {
+    const markdown = editor.getValue();
+    const offset = editor.posToOffset(editor.getCursor());
+    const updated = insertManagedToc(markdown, offset, mode, this.settings);
+    this.applyDocumentChange(editor, updated);
+  }
+
+  private toggleExclusion(editor: Editor): void {
+    const cursor = editor.getCursor();
+    const line = editor.getLine(cursor.line);
+    const replacement = toggleHeadingExclusion(line);
+    if (replacement === null) {
+      new Notice("Place the cursor on a Markdown heading first.");
+      return;
     }
-  };
+    editor.replaceRange(replacement, { line: cursor.line, ch: 0 }, { line: cursor.line, ch: line.length });
+    editor.setCursor({ line: cursor.line, ch: Math.min(cursor.ch, replacement.length) });
+    this.updateEditorTocs(editor);
+  }
+
+  private updateEditorTocs(editor: Editor): void {
+    if (this.updatingEditors.has(editor)) return;
+    const markdown = editor.getValue();
+    const updated = updateManagedTocs(markdown, this.settings);
+    if (updated !== markdown) this.applyDocumentChange(editor, updated);
+  }
+
+  private applyDocumentChange(editor: Editor, updated: string): void {
+    const original = editor.getValue();
+    if (original === updated) return;
+
+    let start = 0;
+    while (start < original.length && start < updated.length && original[start] === updated[start]) start += 1;
+    let oldEnd = original.length;
+    let newEnd = updated.length;
+    while (oldEnd > start && newEnd > start && original[oldEnd - 1] === updated[newEnd - 1]) {
+      oldEnd -= 1;
+      newEnd -= 1;
+    }
+
+    const cursorOffset = editor.posToOffset(editor.getCursor());
+    const replacement = updated.slice(start, newEnd);
+    const nextCursorOffset = cursorOffset <= start
+      ? cursorOffset
+      : cursorOffset >= oldEnd
+        ? cursorOffset + replacement.length - (oldEnd - start)
+        : start + replacement.length;
+
+    this.updatingEditors.add(editor);
+    editor.replaceRange(replacement, editor.offsetToPos(start), editor.offsetToPos(oldEnd));
+    editor.setCursor(editor.offsetToPos(Math.max(0, Math.min(nextCursorOffset, updated.length))));
+    window.setTimeout(() => this.updatingEditors.delete(editor), 0);
+  }
 }

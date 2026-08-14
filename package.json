@@ -1,10 +1,11 @@
 {
-  "name": "obsidian-plugin-toc",
-  "description": "Create a table of contents for obsidian.md notes.",
+  "name": "toc-gitlab",
+  "version": "0.4.0",
+  "description": "Create auto-updating tables of contents with GitLab-compatible heading links.",
   "scripts": {
     "start": "obsidian-plugin dev src/main.ts",
     "build": "obsidian-plugin build src/main.ts",
-    "test": "node tests/gitlab-anchor.test.js",
+    "test": "node tests/gitlab-anchor.test.js && node tests/managed-toc.test.js",
     "lint": "eslint . --ext .ts,.tsx",
     "release": "auto shipit"
   },
@@ -12,7 +13,7 @@
     "obsidian.md",
     "plugin"
   ],
-  "author": "Andrew Lisowski <lisowski54@gmail.com>",
+  "author": "VingGit and Andrew Lisowski",
   "repository": "VingGit/obsidian-plugin-toc-gitlab",
   "license": "MIT",
   "devDependencies": {
