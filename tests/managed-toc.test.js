@@ -9,8 +9,6 @@ const settings = {
   minimumDepth: 1,
   maximumDepth: 6,
   listStyle: "bullet",
-  useMarkdown: true,
-  githubCompat: true,
   autoUpdate: true,
 };
 
@@ -32,6 +30,12 @@ assert.match(full, /\[First\]\(#first\)/);
 assert.match(full, /\[Second\]\(#second\)/);
 assert.match(full, /\[Visible child\]\(#visible-child\)/);
 assert.doesNotMatch(full, /\[Hidden child\]/);
+assert.doesNotMatch(full, /\[\[#/, "GitLab TOCs never use ambiguous wiki-link syntax");
+
+const legacySettings = { ...settings, useMarkdown: false, githubCompat: false };
+const migrated = insertManagedToc(document, belowFirstHeading, "full", legacySettings);
+assert.match(migrated, /\[First\]\(#first\)/);
+assert.doesNotMatch(migrated, /\[\[#/);
 
 const next = insertManagedToc(document, belowFirstHeading, "next", settings);
 assert.match(next, /\[First child\]\(#first-child\)/);

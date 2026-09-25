@@ -57,11 +57,11 @@ The heading still renders normally and still receives its normal GitLab anchor, 
 | Title | Empty | Optional content placed before each generated list. |
 | Minimum heading depth | 2 | Shallowest eligible heading level. |
 | Maximum heading depth | 6 | Deepest eligible heading level. |
-| Use Markdown links | Off | Generate Markdown links instead of WikiLinks. |
-| GitLab-compatible Markdown section links | Off | Apply GitLab heading-anchor rules. |
 | Automatically update managed TOCs | On | Refresh TOCs after heading edits. |
 
-For portable GitLab documents, enable **Use Markdown links** and **GitLab-compatible Markdown section links**. The plugin intercepts Obsidian's native link router at runtime, maps GitLab fragments to their real headings, and uses temporary in-memory block targets for exact navigation—including duplicate headings. The raw Markdown remains GitLab-compatible and no compatibility plugin is required.
+Generated entries always use standard Markdown section links such as `[Example](#example)`. This is the documented same-page link syntax across GitLab 17, 18, and 19; unlike Obsidian WikiLinks, it cannot be reinterpreted as a GitLab wiki-page link. Existing managed TOCs are converted the next time they update.
+
+The plugin intercepts Obsidian's native link router at runtime, maps GitLab fragments to their real headings, and uses temporary in-memory block targets for exact navigation—including duplicate headings. The raw Markdown remains GitLab-compatible and no compatibility plugin is required.
 
 ## Installation
 

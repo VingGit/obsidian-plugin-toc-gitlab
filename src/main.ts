@@ -61,21 +61,6 @@ class TableOfContentsSettingsTab extends PluginSettingTab {
           control: { type: "slider", key: "maximumDepth", defaultValue: 6, min: 1, max: 6, step: 1 },
         },
         {
-          name: "Use Markdown links",
-          desc: "Generate Markdown links instead of WikiLinks.",
-          control: { type: "toggle", key: "useMarkdown", defaultValue: false },
-        },
-        {
-          name: "GitLab-compatible Markdown section links",
-          desc: "Generate links using current GitLab heading-anchor rules.",
-          control: {
-            type: "toggle",
-            key: "githubCompat",
-            defaultValue: false,
-            disabled: () => !this.plugin.settings.useMarkdown,
-          },
-        },
-        {
           name: "Automatically update managed TOCs",
           desc: "Refresh generated TOCs shortly after headings are edited or reordered.",
           control: { type: "toggle", key: "autoUpdate", defaultValue: true },
@@ -96,13 +81,6 @@ class TableOfContentsSettingsTab extends PluginSettingTab {
       case "maximumDepth":
         if (typeof value === "number") this.plugin.settings[key] = value;
         break;
-      case "useMarkdown":
-        if (typeof value === "boolean") {
-          this.plugin.settings.useMarkdown = value;
-          if (!value) this.plugin.settings.githubCompat = false;
-        }
-        break;
-      case "githubCompat":
       case "autoUpdate":
         if (typeof value === "boolean") this.plugin.settings[key] = value;
         break;
@@ -117,7 +95,6 @@ export default class TableOfContentsPlugin extends Plugin {
     minimumDepth: 2,
     maximumDepth: 6,
     listStyle: "bullet",
-    useMarkdown: false,
     autoUpdate: true,
   };
 
@@ -195,8 +172,6 @@ export default class TableOfContentsPlugin extends Plugin {
     if (typeof loaded.minimumDepth === "number") this.settings.minimumDepth = loaded.minimumDepth;
     if (typeof loaded.maximumDepth === "number") this.settings.maximumDepth = loaded.maximumDepth;
     if (typeof loaded.title === "string") this.settings.title = loaded.title;
-    if (typeof loaded.useMarkdown === "boolean") this.settings.useMarkdown = loaded.useMarkdown;
-    if (typeof loaded.githubCompat === "boolean") this.settings.githubCompat = loaded.githubCompat;
     if (typeof loaded.autoUpdate === "boolean") this.settings.autoUpdate = loaded.autoUpdate;
   }
 

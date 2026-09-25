@@ -97,13 +97,7 @@ function renderLinks(headings, settings) {
   return headings.map((heading) => {
     const bullet = settings.listStyle === "number" ? "1." : "-";
     const indent = "\t".repeat(Math.max(0, heading.level - firstLevel));
-    if (settings.useMarkdown && settings.githubCompat) {
-      return `${indent}${bullet} ${gitLabHeadingLink(heading.text, heading.duplicateIndex)}`;
-    }
-    if (settings.useMarkdown) {
-      return `${indent}${bullet} [${heading.text}](#${encodeURI(heading.text)})`;
-    }
-    return `${indent}${bullet} [[#${heading.text}|${heading.text}]]`;
+    return `${indent}${bullet} ${gitLabHeadingLink(heading.text, heading.duplicateIndex)}`;
   }).join("\n");
 }
 
