@@ -4,4 +4,5 @@ export interface TableOfContentsPluginSettings {
   maximumDepth: number;
   title?: string;
   autoUpdate: boolean
+  showTocComments: boolean
 }

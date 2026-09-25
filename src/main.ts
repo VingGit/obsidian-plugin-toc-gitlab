@@ -16,7 +16,9 @@ import {
   toggleHeadingExclusion,
   updateManagedTocs,
 } from "./create-toc";
+import { createManagedTocMarkerExtensions } from "./editor-markers";
 import { TableOfContentsPluginSettings } from "./types";
+import type { Extension } from "@codemirror/state";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -53,7 +55,7 @@ class TableOfContentsSettingsTab extends PluginSettingTab {
         {
           name: "Minimum heading depth",
           desc: "The shallowest heading level included in a full TOC.",
-          control: { type: "slider", key: "minimumDepth", defaultValue: 2, min: 1, max: 6, step: 1 },
+          control: { type: "slider", key: "minimumDepth", defaultValue: 1, min: 1, max: 6, step: 1 },
         },
         {
           name: "Maximum heading depth",
@@ -64,6 +66,11 @@ class TableOfContentsSettingsTab extends PluginSettingTab {
           name: "Automatically update managed TOCs",
           desc: "Refresh generated TOCs shortly after headings are edited or reordered.",
           control: { type: "toggle", key: "autoUpdate", defaultValue: true },
+        },
+        {
+          name: "Show managed TOC comments",
+          desc: "Always show the start and end comments in Live Preview. When disabled, they appear only while the cursor is inside that TOC.",
+          control: { type: "toggle", key: "showTocComments", defaultValue: false },
         },
       ],
     }];
@@ -82,6 +89,7 @@ class TableOfContentsSettingsTab extends PluginSettingTab {
         if (typeof value === "number") this.plugin.settings[key] = value;
         break;
       case "autoUpdate":
+      case "showTocComments":
         if (typeof value === "boolean") this.plugin.settings[key] = value;
         break;
     }
@@ -92,14 +100,16 @@ class TableOfContentsSettingsTab extends PluginSettingTab {
 
 export default class TableOfContentsPlugin extends Plugin {
   public settings: TableOfContentsPluginSettings = {
-    minimumDepth: 2,
+    minimumDepth: 1,
     maximumDepth: 6,
     listStyle: "bullet",
     autoUpdate: true,
+    showTocComments: false,
   };
 
   private updateTimers = new Map<Editor, number>();
   private updatingEditors = new Set<Editor>();
+  private readonly markerExtensions: Extension[] = [];
 
   public onload(): void {
     void this.initialize();
@@ -108,6 +118,8 @@ export default class TableOfContentsPlugin extends Plugin {
   private async initialize(): Promise<void> {
     await this.loadSettings();
     this.patchGitLabLinkNavigation();
+    this.markerExtensions.push(...createManagedTocMarkerExtensions(() => this.settings.showTocComments));
+    this.registerEditorExtension(this.markerExtensions);
 
     this.addCommand({
       id: "create-toc",
@@ -173,6 +185,7 @@ export default class TableOfContentsPlugin extends Plugin {
     if (typeof loaded.maximumDepth === "number") this.settings.maximumDepth = loaded.maximumDepth;
     if (typeof loaded.title === "string") this.settings.title = loaded.title;
     if (typeof loaded.autoUpdate === "boolean") this.settings.autoUpdate = loaded.autoUpdate;
+    if (typeof loaded.showTocComments === "boolean") this.settings.showTocComments = loaded.showTocComments;
   }
 
   public onunload(): void {
@@ -182,6 +195,12 @@ export default class TableOfContentsPlugin extends Plugin {
 
   public async saveSettings(): Promise<void> {
     await this.saveData(this.settings);
+    this.markerExtensions.splice(
+      0,
+      this.markerExtensions.length,
+      ...createManagedTocMarkerExtensions(() => this.settings.showTocComments)
+    );
+    this.app.workspace.updateOptions();
     const view = this.app.workspace.getActiveViewOfType(MarkdownView);
     if (view) this.updateEditorTocs(view.editor);
   }

@@ -8,6 +8,7 @@ export interface CursorPosition {
 export type TocMode = "full" | "next";
 
 export {
+  hiddenManagedTocMarkerOffsets,
   insertManagedToc,
   parseHeadings,
   toggleHeadingExclusion,

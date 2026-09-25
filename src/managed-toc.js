@@ -13,6 +13,21 @@ function managedRanges(markdown) {
   }));
 }
 
+function hiddenManagedTocMarkerOffsets(markdown, selections) {
+  return managedRanges(markdown).flatMap((range) => {
+    const selected = selections.some((selection) => {
+      const from = Math.min(selection.from, selection.to);
+      const to = Math.max(selection.from, selection.to);
+      return from <= range.end && to >= range.start;
+    });
+    if (selected) return [];
+    return [{
+      startMarker: range.start,
+      endMarker: range.end - END_MARKER.length,
+    }];
+  });
+}
+
 function parseHeadings(markdown) {
   const ranges = managedRanges(markdown);
   const headings = [];
@@ -151,6 +166,7 @@ function toggleHeadingExclusion(line) {
 module.exports = {
   END_MARKER,
   IGNORE_MARKER,
+  hiddenManagedTocMarkerOffsets,
   insertManagedToc,
   parseHeadings,
   toggleHeadingExclusion,

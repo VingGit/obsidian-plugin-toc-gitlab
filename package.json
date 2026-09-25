@@ -1,6 +1,6 @@
 {
   "name": "toc-gitlab",
-  "version": "0.4.5",
+  "version": "0.4.6",
   "description": "Create auto-updating tables of contents with GitLab-compatible heading links.",
   "scripts": {
     "start": "obsidian-plugin dev src/main.ts",
@@ -17,7 +17,16 @@
   "repository": "VingGit/obsidian-plugin-toc-gitlab",
   "packageManager": "npm@11.11.1",
   "license": "MIT",
+  "esbuild": {
+    "external": [
+      "obsidian",
+      "@codemirror/state",
+      "@codemirror/view"
+    ]
+  },
   "devDependencies": {
+    "@codemirror/state": "^6.5.0",
+    "@codemirror/view": "^6.38.6",
     "@eslint/js": "^9.39.5",
     "@eslint/json": "^0.14.0",
     "@types/node": "^14.14.2",

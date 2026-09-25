@@ -1,5 +1,6 @@
 const assert = require("assert");
 const {
+  hiddenManagedTocMarkerOffsets,
   insertManagedToc,
   toggleHeadingExclusion,
   updateManagedTocs,
@@ -37,6 +38,23 @@ const migrated = insertManagedToc(document, belowFirstHeading, "full", legacySet
 assert.match(migrated, /\[First\]\(#first\)/);
 assert.doesNotMatch(migrated, /\[\[#/);
 
+const tocStart = full.indexOf("<!-- toc-gitlab:start");
+const tocEnd = full.indexOf("<!-- toc-gitlab:end -->");
+assert.deepStrictEqual(hiddenManagedTocMarkerOffsets(full, []), [{
+  startMarker: tocStart,
+  endMarker: tocEnd,
+}]);
+assert.deepStrictEqual(
+  hiddenManagedTocMarkerOffsets(full, [{ from: tocStart + 1, to: tocStart + 1 }]),
+  [],
+  "comments are revealed when the cursor is inside the managed TOC"
+);
+assert.deepStrictEqual(
+  hiddenManagedTocMarkerOffsets(full, [{ from: full.length, to: full.length }]),
+  [{ startMarker: tocStart, endMarker: tocEnd }],
+  "comments stay hidden when the cursor is outside the managed TOC"
+);
+
 const next = insertManagedToc(document, belowFirstHeading, "next", settings);
 assert.match(next, /\[First child\]\(#first-child\)/);
 assert.doesNotMatch(next, /\[Second\]\(#second\)/);
@@ -57,4 +75,4 @@ assert.strictEqual(toggleHeadingExclusion("not a heading"), null);
 const crlf = insertManagedToc("# One\r\n\r\n## Two\r\n", 7, "full", settings);
 assert.ok(!/(?<!\r)\n/.test(crlf), "managed TOCs preserve CRLF line endings");
 
-console.log("Validated managed full, next-level, update, and exclusion behavior.");
+console.log("Validated managed TOCs, marker visibility, updates, and exclusions.");

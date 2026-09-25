@@ -8,8 +8,19 @@ export interface ParsedHeading {
   offset: number;
 }
 
+export interface OffsetRange {
+  from: number;
+  to: number;
+}
+
+export interface ManagedTocMarkerOffsets {
+  startMarker: number;
+  endMarker: number;
+}
+
 export const END_MARKER: string;
 export const IGNORE_MARKER: string;
+export function hiddenManagedTocMarkerOffsets(markdown: string, selections: OffsetRange[]): ManagedTocMarkerOffsets[];
 export function insertManagedToc(markdown: string, offset: number, mode: TocMode, settings: TableOfContentsPluginSettings): string;
 export function parseHeadings(markdown: string): ParsedHeading[];
 export function toggleHeadingExclusion(line: string): string | null;
