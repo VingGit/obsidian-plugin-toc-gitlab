@@ -8,14 +8,11 @@ import {
 } from "@codemirror/view";
 import { hiddenManagedTocMarkerOffsets } from "./create-toc";
 
-const hiddenMarkerLine = Decoration.replace({ block: true });
+const hiddenMarkerText = Decoration.replace({});
 
 function hiddenLineRange(view: EditorView, offset: number): Range<Decoration> {
   const line = view.state.doc.lineAt(offset);
-  const to = line.number < view.state.doc.lines
-    ? view.state.doc.line(line.number + 1).from
-    : line.to;
-  return hiddenMarkerLine.range(line.from, to);
+  return hiddenMarkerText.range(line.from, line.to);
 }
 
 function buildDecorations(view: EditorView, showComments: () => boolean): DecorationSet {
