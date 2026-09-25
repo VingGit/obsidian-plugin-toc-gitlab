@@ -13,7 +13,7 @@ This is a GitLab-focused fork of [obsidian-plugin-toc](https://github.com/hipste
 - Toggle heading exclusion from the command palette or the editor right-click menu.
 - Generate GitLab-compatible anchors for Unicode, punctuation, and duplicate headings.
 - Follow those raw GitLab-compatible links natively inside Obsidian without changing the Markdown.
-- Hide managed-TOC comments in Live Preview until the cursor enters the TOC.
+- Hide managed-TOC comments until the cursor enters the TOC.
 
 ## Usage
 
@@ -59,7 +59,7 @@ The heading still renders normally and still receives its normal GitLab anchor, 
 | Minimum heading depth | 1 | Shallowest eligible heading level. |
 | Maximum heading depth | 6 | Deepest eligible heading level. |
 | Automatically update managed TOCs | On | Refresh TOCs after heading edits. |
-| Show managed TOC comments | Off | Keep start and end comments visible in Live Preview instead of revealing them only while editing the TOC. |
+| Show managed TOC comments | Off | Keep start and end comments visible instead of revealing them only while editing the TOC. |
 
 Generated entries always use standard Markdown section links such as `[Example](#example)`. This is the documented same-page link syntax across GitLab 17, 18, and 19; unlike Obsidian WikiLinks, it cannot be reinterpreted as a GitLab wiki-page link. Existing managed TOCs are converted the next time they update.
 

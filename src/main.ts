@@ -69,7 +69,7 @@ class TableOfContentsSettingsTab extends PluginSettingTab {
         },
         {
           name: "Show managed TOC comments",
-          desc: "Always show the start and end comments in Live Preview. When disabled, they appear only while the cursor is inside that TOC.",
+          desc: "Always show the start and end comments. When disabled, they appear only while the cursor is focused inside that TOC.",
           control: { type: "toggle", key: "showTocComments", defaultValue: false },
         },
       ],

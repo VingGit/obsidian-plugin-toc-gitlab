@@ -6,14 +6,20 @@ import {
   ViewPlugin,
   ViewUpdate,
 } from "@codemirror/view";
-import { editorLivePreviewField } from "obsidian";
 import { hiddenManagedTocMarkerOffsets } from "./create-toc";
 
-const HIDDEN_MARKER_CLASS = "toc-gitlab-hidden-marker";
-const hiddenMarkerLine = Decoration.line({ class: HIDDEN_MARKER_CLASS });
+const hiddenMarkerLine = Decoration.replace({ block: true });
+
+function hiddenLineRange(view: EditorView, offset: number): Range<Decoration> {
+  const line = view.state.doc.lineAt(offset);
+  const to = line.number < view.state.doc.lines
+    ? view.state.doc.line(line.number + 1).from
+    : line.to;
+  return hiddenMarkerLine.range(line.from, to);
+}
 
 function buildDecorations(view: EditorView, showComments: () => boolean): DecorationSet {
-  if (showComments() || !view.state.field(editorLivePreviewField, false)) {
+  if (showComments()) {
     return Decoration.none;
   }
 
@@ -24,8 +30,8 @@ function buildDecorations(view: EditorView, showComments: () => boolean): Decora
   const markerLines: Range<Decoration>[] = [];
   for (const { startMarker, endMarker } of markerOffsets) {
     markerLines.push(
-      hiddenMarkerLine.range(view.state.doc.lineAt(startMarker).from),
-      hiddenMarkerLine.range(view.state.doc.lineAt(endMarker).from)
+      hiddenLineRange(view, startMarker),
+      hiddenLineRange(view, endMarker)
     );
   }
   return Decoration.set(markerLines, true);
@@ -40,10 +46,7 @@ export function createManagedTocMarkerExtensions(showComments: () => boolean): E
     }
 
     public update(update: ViewUpdate): void {
-      const livePreviewChanged =
-        update.startState.field(editorLivePreviewField, false) !==
-        update.state.field(editorLivePreviewField, false);
-      if (update.docChanged || update.selectionSet || update.focusChanged || livePreviewChanged) {
+      if (update.docChanged || update.selectionSet || update.focusChanged) {
         this.decorations = buildDecorations(update.view, showComments);
       }
     }
@@ -51,10 +54,5 @@ export function createManagedTocMarkerExtensions(showComments: () => boolean): E
     decorations: (value) => value.decorations,
   });
 
-  return [
-    EditorView.baseTheme({
-      [`.cm-line.${HIDDEN_MARKER_CLASS}`]: { display: "none" },
-    }),
-    markerPlugin,
-  ];
+  return [markerPlugin];
 }
